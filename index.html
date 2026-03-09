@@ -16,6 +16,7 @@
       <h1>Places Dashboard</h1>
       <p class="subtitle">Filter by purpose and area, sort however you want, and add your own spots.</p>
       <p id="backend-status" class="backend-status">Connecting to shared database...</p>
+      <p id="current-user" class="current-user">User: Not set</p>
       <div class="hero-stats">
         <article class="stat">
           <p class="stat-label">Total Places</p>
@@ -89,6 +90,39 @@
 
     <section class="panel">
       <div class="panel-header">
+        <h2>Manage Area / Purpose Options</h2>
+      </div>
+      <div class="manage-grid">
+        <form id="add-area-form" class="option-form">
+          <label>
+            Add Area
+            <input type="text" id="new-area-input" placeholder="Example: Shibuya" required />
+          </label>
+          <button type="submit">Add Area</button>
+        </form>
+        <form id="add-purpose-form" class="option-form">
+          <label>
+            Add Purpose
+            <input type="text" id="new-purpose-input" placeholder="Example: Museum" required />
+          </label>
+          <button type="submit">Add Purpose</button>
+        </form>
+      </div>
+      <div class="option-lists">
+        <div>
+          <p class="mini-title">Current Areas</p>
+          <p id="areas-list" class="chip-list"></p>
+        </div>
+        <div>
+          <p class="mini-title">Current Purposes</p>
+          <p id="purposes-list" class="chip-list"></p>
+        </div>
+      </div>
+      <p id="options-message" class="form-message" aria-live="polite"></p>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
         <h2>Add a Place</h2>
       </div>
       <form id="add-place-form" class="add-grid">
@@ -98,11 +132,11 @@
         </label>
         <label>
           Area
-          <input type="text" id="place-area" required />
+          <input type="text" id="place-area" list="area-options" placeholder="Type to search" required />
         </label>
         <label>
           Purpose
-          <input type="text" id="place-purpose" required />
+          <input type="text" id="place-purpose" list="purpose-options" placeholder="Type to search" required />
         </label>
         <label class="wide">
           Description / Details
@@ -147,6 +181,9 @@
         </table>
       </div>
     </section>
+
+    <datalist id="area-options"></datalist>
+    <datalist id="purpose-options"></datalist>
   </main>
 
   <div id="edit-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="edit-title">
@@ -162,11 +199,11 @@
         </label>
         <label>
           Area
-          <input type="text" id="edit-place-area" required />
+          <input type="text" id="edit-place-area" list="area-options" placeholder="Type to search" required />
         </label>
         <label>
           Purpose
-          <input type="text" id="edit-place-purpose" required />
+          <input type="text" id="edit-place-purpose" list="purpose-options" placeholder="Type to search" required />
         </label>
         <label class="wide">
           Description / Details
@@ -191,6 +228,30 @@
         <button type="submit">Save Changes</button>
       </form>
       <p id="edit-message" class="form-message" aria-live="polite"></p>
+    </div>
+  </div>
+
+  <div id="confirm-delete-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="confirm-delete-title">
+    <div class="confirm-card">
+      <h3 id="confirm-delete-title">Are you sure?</h3>
+      <p id="confirm-delete-text">This place will be removed.</p>
+      <div class="confirm-actions">
+        <button type="button" id="cancel-delete" class="ghost-btn">Cancel</button>
+        <button type="button" id="confirm-delete" class="delete-btn">Yes, Remove</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="user-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="user-title">
+    <div class="confirm-card">
+      <h3 id="user-title">Who is this?</h3>
+      <form id="user-form" class="user-form">
+        <label>
+          Your name
+          <input type="text" id="user-name-input" placeholder="Enter your name" required />
+        </label>
+        <button type="submit">Continue</button>
+      </form>
     </div>
   </div>
 

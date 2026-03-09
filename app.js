@@ -1,7 +1,12 @@
+
 const TABLE_NAME = "places";
+const AREA_TABLE = "place_areas";
+const PURPOSE_TABLE = "place_purposes";
+const USER_NAME_KEY = "japan_places_user_name_v1";
 
 const el = {
   backendStatus: document.getElementById("backend-status"),
+  currentUser: document.getElementById("current-user"),
   totalCount: document.getElementById("total-count"),
   shownCount: document.getElementById("shown-count"),
   customCount: document.getElementById("custom-count"),
@@ -12,15 +17,29 @@ const el = {
   sortDirection: document.getElementById("sort-direction"),
   resetFilters: document.getElementById("reset-filters"),
   addForm: document.getElementById("add-place-form"),
+  addName: document.getElementById("place-name"),
+  addArea: document.getElementById("place-area"),
+  addPurpose: document.getElementById("place-purpose"),
+  addDetails: document.getElementById("place-details"),
+  addAddress: document.getElementById("place-address"),
   addPhotos: document.getElementById("place-photos"),
   addPasteZone: document.getElementById("add-paste-zone"),
   addPhotoList: document.getElementById("add-photo-list"),
   formMessage: document.getElementById("form-message"),
+  optionsMessage: document.getElementById("options-message"),
   tableBody: document.getElementById("places-table-body"),
   mapSelect: document.getElementById("map-place-select"),
   mapFrame: document.getElementById("map-frame"),
   mapEmpty: document.getElementById("map-empty"),
   mapLink: document.getElementById("open-map-link"),
+  areaOptionsDataList: document.getElementById("area-options"),
+  purposeOptionsDataList: document.getElementById("purpose-options"),
+  areasList: document.getElementById("areas-list"),
+  purposesList: document.getElementById("purposes-list"),
+  addAreaForm: document.getElementById("add-area-form"),
+  addPurposeForm: document.getElementById("add-purpose-form"),
+  newAreaInput: document.getElementById("new-area-input"),
+  newPurposeInput: document.getElementById("new-purpose-input"),
   editModal: document.getElementById("edit-modal"),
   closeEditModal: document.getElementById("close-edit-modal"),
   editForm: document.getElementById("edit-place-form"),
@@ -36,6 +55,13 @@ const el = {
   lightbox: document.getElementById("photo-lightbox"),
   lightboxImage: document.getElementById("lightbox-image"),
   closeLightbox: document.getElementById("close-lightbox"),
+  confirmDeleteModal: document.getElementById("confirm-delete-modal"),
+  confirmDeleteText: document.getElementById("confirm-delete-text"),
+  cancelDelete: document.getElementById("cancel-delete"),
+  confirmDelete: document.getElementById("confirm-delete"),
+  userModal: document.getElementById("user-modal"),
+  userForm: document.getElementById("user-form"),
+  userNameInput: document.getElementById("user-name-input"),
 };
 
 const config = window.APP_CONFIG || {};
@@ -44,12 +70,47 @@ const supabaseClient = hasBackend ? window.supabase.createClient(config.supabase
 const storageBucket = config.storageBucket || "place-photos";
 
 let places = [];
+let areaOptions = [];
+let purposeOptions = [];
 let currentFilteredRows = [];
 let selectedMapPlaceId = "";
 let editingPlaceId = "";
+let pendingDeletePlace = null;
 let editingDraftPhotos = [];
 let addDraftPhotos = [];
 let realtimeChannel = null;
+let currentUserName = "";
+let optionTablesReady = false;
+
+function readStoredUserName() {
+  try {
+    return (localStorage.getItem(USER_NAME_KEY) || "").trim();
+  } catch {
+    return "";
+  }
+}
+
+function saveUserName(name) {
+  try {
+    localStorage.setItem(USER_NAME_KEY, name);
+  } catch {
+    // no-op
+  }
+}
+
+function setCurrentUser(name) {
+  currentUserName = name;
+  el.currentUser.textContent = `User: ${currentUserName || "Not set"}`;
+}
+
+function ensureCurrentUser() {
+  if (currentUserName) {
+    return true;
+  }
+  el.userModal.classList.remove("hidden");
+  el.userNameInput.focus();
+  return false;
+}
 
 function setBackendStatus(text, mode) {
   el.backendStatus.textContent = text;
@@ -57,6 +118,21 @@ function setBackendStatus(text, mode) {
   if (mode) {
     el.backendStatus.classList.add(mode);
   }
+}
+
+function setFormMessage(text, isSuccess) {
+  el.formMessage.textContent = text;
+  el.formMessage.classList.toggle("success", Boolean(isSuccess));
+}
+
+function setEditMessage(text, isSuccess) {
+  el.editMessage.textContent = text;
+  el.editMessage.classList.toggle("success", Boolean(isSuccess));
+}
+
+function setOptionsMessage(text, isSuccess) {
+  el.optionsMessage.textContent = text;
+  el.optionsMessage.classList.toggle("success", Boolean(isSuccess));
 }
 
 function byTextAsc(a, b) {
@@ -72,10 +148,93 @@ function normalizePlace(raw, fallbackId) {
     details: (raw.details || raw["Description/Details"] || "").trim(),
     address: (raw.address || raw.Address || "").trim(),
     photos: Array.isArray(raw.photos) ? raw.photos.filter(Boolean) : [],
-    source: (raw.source || "sheet").trim(),
+    source: (raw.source || "Sheet").trim(),
   };
 }
 
+function toMapsQuery(place) {
+  return encodeURIComponent(place.address || `${place.name}, ${place.area}, Japan`);
+}
+
+function openLightbox(src, altText) {
+  el.lightboxImage.src = src;
+  el.lightboxImage.alt = altText || "Enlarged photo";
+  el.lightbox.classList.remove("hidden");
+}
+
+function closeLightbox() {
+  el.lightboxImage.removeAttribute("src");
+  el.lightbox.classList.add("hidden");
+}
+
+function resolveDraftSrc(item) {
+  return item.kind === "url" ? item.value : item.dataUrl;
+}
+
+function makePhotoThumbnail(src, index, withRemove, onRemove) {
+  const wrap = document.createElement("div");
+  wrap.className = "photo-item";
+
+  const img = document.createElement("img");
+  img.className = "photo-thumb";
+  img.src = src;
+  img.alt = `Photo ${index + 1}`;
+  img.addEventListener("click", () => openLightbox(src, img.alt));
+  wrap.appendChild(img);
+
+  if (withRemove && typeof onRemove === "function") {
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "photo-remove";
+    remove.textContent = "x";
+    remove.addEventListener("click", (event) => {
+      event.stopPropagation();
+      onRemove(index);
+    });
+    wrap.appendChild(remove);
+  }
+
+  return wrap;
+}
+
+function renderDraftPhotoList(targetEl, drafts, onRemove) {
+  targetEl.innerHTML = "";
+
+  if (!drafts.length) {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    empty.textContent = "No photos attached.";
+    targetEl.appendChild(empty);
+    return;
+  }
+
+  drafts.forEach((draft, index) => {
+    targetEl.appendChild(makePhotoThumbnail(resolveDraftSrc(draft), index, true, onRemove));
+  });
+}
+
+function createPhotosNode(photos) {
+  const list = document.createElement("div");
+  list.className = "photo-list";
+  photos.forEach((photo, index) => {
+    list.appendChild(makePhotoThumbnail(photo, index, false));
+  });
+  return list;
+}
+
+function renderAddPhotoList() {
+  renderDraftPhotoList(el.addPhotoList, addDraftPhotos, (index) => {
+    addDraftPhotos = addDraftPhotos.filter((_, i) => i !== index);
+    renderAddPhotoList();
+  });
+}
+
+function renderEditPhotoList() {
+  renderDraftPhotoList(el.editPhotoList, editingDraftPhotos, (index) => {
+    editingDraftPhotos = editingDraftPhotos.filter((_, i) => i !== index);
+    renderEditPhotoList();
+  });
+}
 function setSelectOptions(selectEl, values, label) {
   const previous = selectEl.value;
   selectEl.innerHTML = "";
@@ -97,12 +256,47 @@ function setSelectOptions(selectEl, values, label) {
   }
 }
 
+function renderOptionDataList(dataListEl, values) {
+  dataListEl.innerHTML = "";
+  values.forEach((value) => {
+    const option = document.createElement("option");
+    option.value = value;
+    dataListEl.appendChild(option);
+  });
+}
+
+function renderChipList(container, values) {
+  if (!values.length) {
+    container.textContent = "-";
+    return;
+  }
+
+  container.innerHTML = values.map((value) => `<span class="chip">${value}</span>`).join(" ");
+}
+
 function refreshFilterOptions() {
   const areas = Array.from(new Set(places.map((place) => place.area).filter(Boolean))).sort(byTextAsc);
   const purposes = Array.from(new Set(places.map((place) => place.purpose).filter(Boolean))).sort(byTextAsc);
 
   setSelectOptions(el.areaFilter, areas, "All Areas");
   setSelectOptions(el.purposeFilter, purposes, "All Purposes");
+}
+
+function refreshManagedOptions() {
+  renderOptionDataList(el.areaOptionsDataList, areaOptions);
+  renderOptionDataList(el.purposeOptionsDataList, purposeOptions);
+  renderChipList(el.areasList, areaOptions);
+  renderChipList(el.purposesList, purposeOptions);
+}
+
+function canonicalFromOptions(inputValue, options) {
+  const raw = inputValue.trim();
+  if (!raw) {
+    return "";
+  }
+
+  const match = options.find((option) => option.toLowerCase() === raw.toLowerCase());
+  return match || "";
 }
 
 function applyFiltersAndSort() {
@@ -132,82 +326,10 @@ function applyFiltersAndSort() {
   return rows;
 }
 
-function toMapsQuery(place) {
-  return encodeURIComponent(place.address || `${place.name}, ${place.area}, Japan`);
-}
-
-function openLightbox(src, altText) {
-  el.lightboxImage.src = src;
-  el.lightboxImage.alt = altText || "Enlarged photo";
-  el.lightbox.classList.remove("hidden");
-}
-
-function closeLightbox() {
-  el.lightboxImage.removeAttribute("src");
-  el.lightbox.classList.add("hidden");
-}
-
-function makePhotoThumbnail(src, index, withRemove, onRemove) {
-  const wrap = document.createElement("div");
-  wrap.className = "photo-item";
-
-  const img = document.createElement("img");
-  img.className = "photo-thumb";
-  img.src = src;
-  img.alt = `Photo ${index + 1}`;
-  img.addEventListener("click", () => openLightbox(src, img.alt));
-  wrap.appendChild(img);
-
-  if (withRemove && typeof onRemove === "function") {
-    const remove = document.createElement("button");
-    remove.type = "button";
-    remove.className = "photo-remove";
-    remove.textContent = "x";
-    remove.addEventListener("click", (event) => {
-      event.stopPropagation();
-      onRemove(index);
-    });
-    wrap.appendChild(remove);
-  }
-
-  return wrap;
-}
-
-function resolveDraftSrc(item) {
-  return item.kind === "url" ? item.value : item.dataUrl;
-}
-
-function renderDraftPhotoList(targetEl, drafts, onRemove) {
-  targetEl.innerHTML = "";
-
-  if (!drafts.length) {
-    const empty = document.createElement("p");
-    empty.className = "muted";
-    empty.textContent = "No photos attached.";
-    targetEl.appendChild(empty);
-    return;
-  }
-
-  drafts.forEach((item, index) => {
-    targetEl.appendChild(makePhotoThumbnail(resolveDraftSrc(item), index, true, onRemove));
-  });
-}
-
-function createPhotosNode(photos) {
-  const list = document.createElement("div");
-  list.className = "photo-list";
-
-  photos.forEach((photo, index) => {
-    list.appendChild(makePhotoThumbnail(photo, index, false));
-  });
-
-  return list;
-}
-
 function updateMap() {
   const rows = currentFilteredRows;
-
   el.mapSelect.innerHTML = "";
+
   if (!rows.length) {
     el.mapFrame.style.display = "none";
     el.mapEmpty.style.display = "block";
@@ -242,14 +364,15 @@ function updateMap() {
   el.mapEmpty.style.display = "none";
 }
 
-function setFormMessage(text, isSuccess) {
-  el.formMessage.textContent = text;
-  el.formMessage.classList.toggle("success", Boolean(isSuccess));
+function openDeleteConfirm(place) {
+  pendingDeletePlace = place;
+  el.confirmDeleteText.textContent = `Remove "${place.name}" from the list?`;
+  el.confirmDeleteModal.classList.remove("hidden");
 }
 
-function setEditMessage(text, isSuccess) {
-  el.editMessage.textContent = text;
-  el.editMessage.classList.toggle("success", Boolean(isSuccess));
+function closeDeleteConfirm() {
+  pendingDeletePlace = null;
+  el.confirmDeleteModal.classList.add("hidden");
 }
 
 function renderTable() {
@@ -267,18 +390,11 @@ function renderTable() {
   } else {
     currentFilteredRows.forEach((place) => {
       const row = document.createElement("tr");
-
-      const nameCell = document.createElement("td");
-      nameCell.textContent = place.name || "-";
-      row.appendChild(nameCell);
-
-      const areaCell = document.createElement("td");
-      areaCell.textContent = place.area || "-";
-      row.appendChild(areaCell);
-
-      const purposeCell = document.createElement("td");
-      purposeCell.textContent = place.purpose || "-";
-      row.appendChild(purposeCell);
+      row.innerHTML = `
+        <td>${place.name || "-"}</td>
+        <td>${place.area || "-"}</td>
+        <td>${place.purpose || "-"}</td>
+      `;
 
       const descCell = document.createElement("td");
       const descBlock = document.createElement("div");
@@ -299,8 +415,8 @@ function renderTable() {
 
       const sourceCell = document.createElement("td");
       const source = document.createElement("span");
-      source.className = `source-pill ${place.source === "sheet" ? "source-sheet" : "source-custom"}`;
-      source.textContent = place.source === "sheet" ? "Sheet" : "User";
+      source.className = `source-pill ${place.source === "Sheet" ? "source-sheet" : "source-custom"}`;
+      source.textContent = place.source || "-";
       sourceCell.appendChild(source);
       row.appendChild(sourceCell);
 
@@ -321,20 +437,12 @@ function renderTable() {
       removeButton.className = "small-btn delete-btn";
       removeButton.textContent = "Remove";
       removeButton.disabled = !hasBackend;
-      removeButton.addEventListener("click", async () => {
+      removeButton.addEventListener("click", () => {
         if (!hasBackend) {
           setFormMessage("Connect Supabase first to edit shared data.", false);
           return;
         }
-
-        const { error } = await supabaseClient.from(TABLE_NAME).delete().eq("id", place.id);
-        if (error) {
-          setFormMessage(`Delete failed: ${error.message}`, false);
-          return;
-        }
-
-        await loadPlaces();
-        setFormMessage("Place removed.", true);
+        openDeleteConfirm(place);
       });
       actionRow.appendChild(removeButton);
 
@@ -345,7 +453,7 @@ function renderTable() {
     });
   }
 
-  const userCount = places.filter((place) => place.source !== "sheet").length;
+  const userCount = places.filter((place) => place.source !== "Sheet").length;
   el.totalCount.textContent = places.length;
   el.shownCount.textContent = currentFilteredRows.length;
   el.customCount.textContent = userCount;
@@ -365,7 +473,6 @@ function resetFilters() {
   el.sortDirection.value = "asc";
   render();
 }
-
 async function compressDataUrl(dataUrl) {
   return new Promise((resolve) => {
     const img = new Image();
@@ -411,41 +518,26 @@ async function filesToDraftPhotos(fileList) {
   if (!files.length) {
     return [];
   }
-
   return Promise.all(files.map((file) => fileToDataUrl(file)));
 }
 
 async function pastedImagesToDraftPhotos(event) {
-  const clipboardItems = event.clipboardData ? Array.from(event.clipboardData.items || []) : [];
-  const imageFiles = clipboardItems
+  const items = event.clipboardData ? Array.from(event.clipboardData.items || []) : [];
+  const files = items
     .filter((item) => item.kind === "file" && item.type.startsWith("image/"))
     .map((item) => item.getAsFile())
     .filter(Boolean);
 
-  if (!imageFiles.length) {
+  if (!files.length) {
     return [];
   }
 
   event.preventDefault();
-  return Promise.all(imageFiles.map((file) => fileToDataUrl(file)));
+  return Promise.all(files.map((file) => fileToDataUrl(file)));
 }
 
 function appendDraftPhotos(targetArray, newPhotos) {
   return [...targetArray, ...newPhotos];
-}
-
-function renderAddPhotoList() {
-  renderDraftPhotoList(el.addPhotoList, addDraftPhotos, (index) => {
-    addDraftPhotos = addDraftPhotos.filter((_, i) => i !== index);
-    renderAddPhotoList();
-  });
-}
-
-function renderEditPhotoList() {
-  renderDraftPhotoList(el.editPhotoList, editingDraftPhotos, (index) => {
-    editingDraftPhotos = editingDraftPhotos.filter((_, i) => i !== index);
-    renderEditPhotoList();
-  });
 }
 
 async function uploadPhotoDataUrl(dataUrl) {
@@ -467,53 +559,14 @@ async function uploadPhotoDataUrl(dataUrl) {
 
 async function resolveDraftPhotoUrls(drafts) {
   const urls = [];
-
   for (const draft of drafts) {
     if (draft.kind === "url") {
       urls.push(draft.value);
-      continue;
+    } else {
+      urls.push(await uploadPhotoDataUrl(draft.dataUrl));
     }
-
-    const uploadedUrl = await uploadPhotoDataUrl(draft.dataUrl);
-    urls.push(uploadedUrl);
   }
-
   return urls;
-}
-
-async function bootstrapSeedPlacesIfEmpty() {
-  if (!config.seedOnFirstRun) {
-    return;
-  }
-
-  const seedData = Array.isArray(window.SEED_PLACES) ? window.SEED_PLACES : [];
-  if (!seedData.length) {
-    return;
-  }
-
-  const { count, error } = await supabaseClient.from(TABLE_NAME).select("id", { count: "exact", head: true });
-  if (error || (count || 0) > 0) {
-    return;
-  }
-
-  const rows = seedData
-    .map((item, index) => normalizePlace(item, `seed-${index + 1}`))
-    .filter((place) => place.name && place.area && place.purpose)
-    .map((place) => ({
-      name: place.name,
-      area: place.area,
-      purpose: place.purpose,
-      details: place.details,
-      address: place.address,
-      photos: [],
-      source: "sheet",
-    }));
-
-  if (!rows.length) {
-    return;
-  }
-
-  await supabaseClient.from(TABLE_NAME).insert(rows);
 }
 
 async function loadPlaces() {
@@ -540,6 +593,84 @@ async function loadPlaces() {
   places = (data || []).map((item) => normalizePlace(item, item.id));
   refreshFilterOptions();
   render();
+}
+
+async function bootstrapSeedPlacesIfEmpty() {
+  if (!config.seedOnFirstRun || !hasBackend) {
+    return;
+  }
+
+  const seedData = Array.isArray(window.SEED_PLACES) ? window.SEED_PLACES : [];
+  if (!seedData.length) {
+    return;
+  }
+
+  const { count, error } = await supabaseClient.from(TABLE_NAME).select("id", { count: "exact", head: true });
+  if (error || (count || 0) > 0) {
+    return;
+  }
+
+  const rows = seedData
+    .map((item, index) => normalizePlace(item, `seed-${index + 1}`))
+    .filter((place) => place.name && place.area && place.purpose)
+    .map((place) => ({
+      name: place.name,
+      area: place.area,
+      purpose: place.purpose,
+      details: place.details,
+      address: place.address,
+      photos: [],
+      source: "Sheet",
+    }));
+
+  if (rows.length) {
+    await supabaseClient.from(TABLE_NAME).insert(rows);
+  }
+}
+
+async function loadManagedOptions() {
+  const derivedAreas = Array.from(new Set(places.map((place) => place.area).filter(Boolean))).sort(byTextAsc);
+  const derivedPurposes = Array.from(new Set(places.map((place) => place.purpose).filter(Boolean))).sort(byTextAsc);
+
+  if (!hasBackend) {
+    areaOptions = derivedAreas;
+    purposeOptions = derivedPurposes;
+    optionTablesReady = false;
+    refreshManagedOptions();
+    return;
+  }
+
+  const [areaResponse, purposeResponse] = await Promise.all([
+    supabaseClient.from(AREA_TABLE).select("name").order("name", { ascending: true }),
+    supabaseClient.from(PURPOSE_TABLE).select("name").order("name", { ascending: true }),
+  ]);
+
+  const areaMissing = areaResponse.error && areaResponse.error.code === "42P01";
+  const purposeMissing = purposeResponse.error && purposeResponse.error.code === "42P01";
+
+  if (areaMissing || purposeMissing) {
+    optionTablesReady = false;
+    areaOptions = derivedAreas;
+    purposeOptions = derivedPurposes;
+    setOptionsMessage("Run latest SQL migration to enable shared Area/Purpose management.", false);
+    refreshManagedOptions();
+    return;
+  }
+
+  if (areaResponse.error || purposeResponse.error) {
+    optionTablesReady = false;
+    areaOptions = derivedAreas;
+    purposeOptions = derivedPurposes;
+    setOptionsMessage("Could not load options tables, using derived values from places.", false);
+    refreshManagedOptions();
+    return;
+  }
+
+  optionTablesReady = true;
+  areaOptions = Array.from(new Set([...(areaResponse.data || []).map((row) => row.name), ...derivedAreas])).sort(byTextAsc);
+  purposeOptions = Array.from(new Set([...(purposeResponse.data || []).map((row) => row.name), ...derivedPurposes])).sort(byTextAsc);
+
+  refreshManagedOptions();
 }
 
 function openEditModal(placeId) {
@@ -569,7 +700,6 @@ function closeEditModal() {
   el.editModal.classList.add("hidden");
   setEditMessage("", false);
 }
-
 function setupRealtime() {
   if (!hasBackend || !config.enableRealtime) {
     return;
@@ -578,7 +708,13 @@ function setupRealtime() {
   realtimeChannel = supabaseClient
     .channel("places-live")
     .on("postgres_changes", { event: "*", schema: "public", table: TABLE_NAME }, () => {
-      loadPlaces();
+      loadPlaces().then(loadManagedOptions);
+    })
+    .on("postgres_changes", { event: "*", schema: "public", table: AREA_TABLE }, () => {
+      loadManagedOptions();
+    })
+    .on("postgres_changes", { event: "*", schema: "public", table: PURPOSE_TABLE }, () => {
+      loadManagedOptions();
     })
     .subscribe();
 }
@@ -595,6 +731,85 @@ function setupEventHandlers() {
   });
 
   el.resetFilters.addEventListener("click", resetFilters);
+
+  el.userForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const name = el.userNameInput.value.trim();
+    if (!name) {
+      return;
+    }
+    saveUserName(name);
+    setCurrentUser(name);
+    el.userModal.classList.add("hidden");
+  });
+
+  el.addAreaForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    if (!ensureCurrentUser()) {
+      setOptionsMessage("Set your name first.", false);
+      return;
+    }
+
+    const value = el.newAreaInput.value.trim();
+    if (!value) {
+      return;
+    }
+
+    if (canonicalFromOptions(value, areaOptions)) {
+      setOptionsMessage("Area already exists.", false);
+      return;
+    }
+
+    if (!hasBackend || !optionTablesReady) {
+      setOptionsMessage("Shared option tables are not ready. Run latest SQL migration first.", false);
+      return;
+    }
+
+    const { error } = await supabaseClient.from(AREA_TABLE).insert({ name: value, created_by: currentUserName });
+    if (error) {
+      setOptionsMessage(`Could not add area: ${error.message}`, false);
+      return;
+    }
+
+    el.newAreaInput.value = "";
+    setOptionsMessage("Area added.", true);
+    await loadManagedOptions();
+  });
+
+  el.addPurposeForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    if (!ensureCurrentUser()) {
+      setOptionsMessage("Set your name first.", false);
+      return;
+    }
+
+    const value = el.newPurposeInput.value.trim();
+    if (!value) {
+      return;
+    }
+
+    if (canonicalFromOptions(value, purposeOptions)) {
+      setOptionsMessage("Purpose already exists.", false);
+      return;
+    }
+
+    if (!hasBackend || !optionTablesReady) {
+      setOptionsMessage("Shared option tables are not ready. Run latest SQL migration first.", false);
+      return;
+    }
+
+    const { error } = await supabaseClient.from(PURPOSE_TABLE).insert({ name: value, created_by: currentUserName });
+    if (error) {
+      setOptionsMessage(`Could not add purpose: ${error.message}`, false);
+      return;
+    }
+
+    el.newPurposeInput.value = "";
+    setOptionsMessage("Purpose added.", true);
+    await loadManagedOptions();
+  });
 
   el.addPhotos.addEventListener("change", async () => {
     try {
@@ -631,29 +846,32 @@ function setupEventHandlers() {
       return;
     }
 
+    if (!ensureCurrentUser()) {
+      setFormMessage("Set your name first.", false);
+      return;
+    }
+
+    const area = canonicalFromOptions(el.addArea.value, areaOptions);
+    const purpose = canonicalFromOptions(el.addPurpose.value, purposeOptions);
     const draft = {
-      name: document.getElementById("place-name").value.trim(),
-      area: document.getElementById("place-area").value.trim(),
-      purpose: document.getElementById("place-purpose").value.trim(),
-      details: document.getElementById("place-details").value.trim(),
-      address: document.getElementById("place-address").value.trim(),
+      name: el.addName.value.trim(),
+      area,
+      purpose,
+      details: el.addDetails.value.trim(),
+      address: el.addAddress.value.trim(),
     };
 
-    if (!draft.name || !draft.area || !draft.purpose || !draft.address) {
-      setFormMessage("Please fill in name, area, purpose, and address.", false);
+    if (!draft.name || !draft.address || !draft.area || !draft.purpose) {
+      setFormMessage("Name/address required and Area/Purpose must be selected from existing options.", false);
       return;
     }
 
     try {
       const photoUrls = await resolveDraftPhotoUrls(addDraftPhotos);
       const { error } = await supabaseClient.from(TABLE_NAME).insert({
-        name: draft.name,
-        area: draft.area,
-        purpose: draft.purpose,
-        details: draft.details,
-        address: draft.address,
+        ...draft,
         photos: photoUrls,
-        source: "user",
+        source: currentUserName,
       });
 
       if (error) {
@@ -666,6 +884,7 @@ function setupEventHandlers() {
       renderAddPhotoList();
       setFormMessage("Place added to shared list.", true);
       await loadPlaces();
+      await loadManagedOptions();
     } catch (error) {
       setFormMessage(`Photo upload failed: ${error.message}`, false);
     }
@@ -713,23 +932,32 @@ function setupEventHandlers() {
       return;
     }
 
+    if (!ensureCurrentUser()) {
+      setEditMessage("Set your name first.", false);
+      return;
+    }
+
+    const area = canonicalFromOptions(el.editArea.value, areaOptions);
+    const purpose = canonicalFromOptions(el.editPurpose.value, purposeOptions);
+
     const payload = {
       name: el.editName.value.trim(),
-      area: el.editArea.value.trim(),
-      purpose: el.editPurpose.value.trim(),
+      area,
+      purpose,
       details: el.editDetails.value.trim(),
       address: el.editAddress.value.trim(),
+      source: currentUserName,
     };
 
-    if (!payload.name || !payload.area || !payload.purpose || !payload.address) {
-      setEditMessage("Name, area, purpose, and address are required.", false);
+    if (!payload.name || !payload.address || !payload.area || !payload.purpose) {
+      setEditMessage("Name/address required and Area/Purpose must be selected from existing options.", false);
       return;
     }
 
     try {
       const photoUrls = await resolveDraftPhotoUrls(editingDraftPhotos);
       const { error } = await supabaseClient
-    .from(TABLE_NAME)
+        .from(TABLE_NAME)
         .update({ ...payload, photos: photoUrls, updated_at: new Date().toISOString() })
         .eq("id", editingPlaceId);
 
@@ -741,9 +969,42 @@ function setupEventHandlers() {
       closeEditModal();
       setFormMessage("Place updated.", true);
       await loadPlaces();
+      await loadManagedOptions();
     } catch (error) {
       setEditMessage(`Photo upload failed: ${error.message}`, false);
     }
+  });
+
+  el.cancelDelete.addEventListener("click", closeDeleteConfirm);
+  el.confirmDeleteModal.addEventListener("click", (event) => {
+    if (event.target === el.confirmDeleteModal) {
+      closeDeleteConfirm();
+    }
+  });
+
+  el.confirmDelete.addEventListener("click", async () => {
+    if (!pendingDeletePlace) {
+      return;
+    }
+
+    if (!ensureCurrentUser()) {
+      closeDeleteConfirm();
+      setFormMessage("Set your name first.", false);
+      return;
+    }
+
+    const target = pendingDeletePlace;
+    closeDeleteConfirm();
+
+    const { error } = await supabaseClient.from(TABLE_NAME).delete().eq("id", target.id);
+    if (error) {
+      setFormMessage(`Delete failed: ${error.message}`, false);
+      return;
+    }
+
+    setFormMessage("Place removed.", true);
+    await loadPlaces();
+    await loadManagedOptions();
   });
 
   el.closeLightbox.addEventListener("click", closeLightbox);
@@ -759,6 +1020,11 @@ function setupEventHandlers() {
       return;
     }
 
+    if (event.key === "Escape" && !el.confirmDeleteModal.classList.contains("hidden")) {
+      closeDeleteConfirm();
+      return;
+    }
+
     if (event.key === "Escape" && !el.lightbox.classList.contains("hidden")) {
       closeLightbox();
     }
@@ -766,9 +1032,18 @@ function setupEventHandlers() {
 }
 
 async function init() {
+  const storedName = readStoredUserName();
+  setCurrentUser(storedName);
+
+  if (!storedName) {
+    el.userModal.classList.remove("hidden");
+    el.userNameInput.focus();
+  }
+
   if (!hasBackend) {
     setBackendStatus("Supabase not configured. App is in read-only seed mode.", "warn");
     await loadPlaces();
+    await loadManagedOptions();
     setupEventHandlers();
     renderAddPhotoList();
     return;
@@ -777,13 +1052,10 @@ async function init() {
   setBackendStatus("Connected to shared database.", "ok");
   await bootstrapSeedPlacesIfEmpty();
   await loadPlaces();
+  await loadManagedOptions();
   setupEventHandlers();
   renderAddPhotoList();
   setupRealtime();
 }
 
 init();
-
-
-
-

@@ -43,3 +43,6 @@ Workflow:
 ## Optional: safer access
 Current policies allow anyone with the link to edit.
 If you want limited editing, we can switch to Supabase Auth + protected policies.
+
+## If you already deployed earlier
+Run `supabase/schema.sql` again in SQL Editor after pulling latest code. The script is idempotent and will create/update the Area/Purpose option tables used by the new dropdown management UI.

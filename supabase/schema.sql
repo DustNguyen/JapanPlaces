@@ -93,3 +93,83 @@ create policy "Public delete place photos"
 on storage.objects for delete
 to anon, authenticated
 using (bucket_id = 'place-photos');
+-- Option management tables for Area/Purpose
+create table if not exists public.place_areas (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  created_by text not null default '',
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.place_purposes (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  created_by text not null default '',
+  created_at timestamptz not null default now()
+);
+
+alter table public.place_areas enable row level security;
+alter table public.place_purposes enable row level security;
+
+drop policy if exists "Public read areas" on public.place_areas;
+create policy "Public read areas"
+on public.place_areas for select
+to anon, authenticated
+using (true);
+
+drop policy if exists "Public insert areas" on public.place_areas;
+create policy "Public insert areas"
+on public.place_areas for insert
+to anon, authenticated
+with check (true);
+
+drop policy if exists "Public update areas" on public.place_areas;
+create policy "Public update areas"
+on public.place_areas for update
+to anon, authenticated
+using (true)
+with check (true);
+
+drop policy if exists "Public delete areas" on public.place_areas;
+create policy "Public delete areas"
+on public.place_areas for delete
+to anon, authenticated
+using (true);
+
+drop policy if exists "Public read purposes" on public.place_purposes;
+create policy "Public read purposes"
+on public.place_purposes for select
+to anon, authenticated
+using (true);
+
+drop policy if exists "Public insert purposes" on public.place_purposes;
+create policy "Public insert purposes"
+on public.place_purposes for insert
+to anon, authenticated
+with check (true);
+
+drop policy if exists "Public update purposes" on public.place_purposes;
+create policy "Public update purposes"
+on public.place_purposes for update
+to anon, authenticated
+using (true)
+with check (true);
+
+drop policy if exists "Public delete purposes" on public.place_purposes;
+create policy "Public delete purposes"
+on public.place_purposes for delete
+to anon, authenticated
+using (true);
+
+-- Seed options from places if empty
+insert into public.place_areas (name, created_by)
+select distinct area, 'System'
+from public.places
+where coalesce(area, '') <> ''
+on conflict (name) do nothing;
+
+insert into public.place_purposes (name, created_by)
+select distinct purpose, 'System'
+from public.places
+where coalesce(purpose, '') <> ''
+on conflict (name) do nothing;
