@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Japan Place Planner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <header class="hero">
+      <p class="eyebrow">Japan Trip Planner</p>
+      <h1>Places Dashboard</h1>
+      <p class="subtitle">Filter by purpose and area, sort however you want, and add your own spots.</p>
+      <p id="backend-status" class="backend-status">Connecting to shared database...</p>
+      <div class="hero-stats">
+        <article class="stat">
+          <p class="stat-label">Total Places</p>
+          <p class="stat-value" id="total-count">0</p>
+        </article>
+        <article class="stat">
+          <p class="stat-label">Shown</p>
+          <p class="stat-value" id="shown-count">0</p>
+        </article>
+        <article class="stat">
+          <p class="stat-label">User Added Places</p>
+          <p class="stat-value" id="custom-count">0</p>
+        </article>
+      </div>
+    </header>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Find Places</h2>
+      </div>
+      <form id="filters-form" class="filters-grid">
+        <label>
+          Search
+          <input type="text" id="search-input" placeholder="Name, details, or address" />
+        </label>
+        <label>
+          Area
+          <select id="area-filter">
+            <option value="all">All Areas</option>
+          </select>
+        </label>
+        <label>
+          Purpose
+          <select id="purpose-filter">
+            <option value="all">All Purposes</option>
+          </select>
+        </label>
+        <label>
+          Sort By
+          <select id="sort-field">
+            <option value="name">Name</option>
+            <option value="area">Area</option>
+            <option value="purpose">Purpose</option>
+          </select>
+        </label>
+        <label>
+          Direction
+          <select id="sort-direction">
+            <option value="asc">A to Z</option>
+            <option value="desc">Z to A</option>
+          </select>
+        </label>
+        <button type="button" id="reset-filters">Reset</button>
+      </form>
+    </section>
+
+    <section class="panel map-panel">
+      <div class="panel-header">
+        <h2>Map View</h2>
+      </div>
+      <div class="map-controls">
+        <label>
+          Show place on map
+          <select id="map-place-select"></select>
+        </label>
+        <a id="open-map-link" href="#" target="_blank" rel="noreferrer">Open in Google Maps</a>
+      </div>
+      <p id="map-empty" class="map-empty">No place selected yet.</p>
+      <iframe id="map-frame" title="Map preview" loading="lazy"></iframe>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Add a Place</h2>
+      </div>
+      <form id="add-place-form" class="add-grid">
+        <label>
+          Name
+          <input type="text" id="place-name" required />
+        </label>
+        <label>
+          Area
+          <input type="text" id="place-area" required />
+        </label>
+        <label>
+          Purpose
+          <input type="text" id="place-purpose" required />
+        </label>
+        <label class="wide">
+          Description / Details
+          <input type="text" id="place-details" />
+        </label>
+        <label class="wide">
+          Address
+          <input type="text" id="place-address" required />
+        </label>
+        <label class="wide">
+          Photos
+          <input type="file" id="place-photos" accept="image/*" multiple />
+        </label>
+        <div class="wide">
+          <p class="mini-title">Paste Photos from Clipboard</p>
+          <div id="add-paste-zone" class="paste-zone" tabindex="0">Click here, then press Ctrl+V / Cmd+V to paste image(s).</div>
+          <div id="add-photo-list" class="photo-list"></div>
+        </div>
+        <button type="submit">Add Place</button>
+      </form>
+      <p id="form-message" class="form-message" aria-live="polite"></p>
+    </section>
+
+    <section class="panel table-panel">
+      <div class="panel-header">
+        <h2>Places List</h2>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Area</th>
+              <th>Purpose</th>
+              <th>Description / Photos</th>
+              <th>Address</th>
+              <th>Source</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="places-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <div id="edit-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="edit-title">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3 id="edit-title">Edit Place</h3>
+        <button type="button" id="close-edit-modal" class="ghost-btn">Close</button>
+      </div>
+      <form id="edit-place-form" class="add-grid">
+        <label>
+          Name
+          <input type="text" id="edit-place-name" required />
+        </label>
+        <label>
+          Area
+          <input type="text" id="edit-place-area" required />
+        </label>
+        <label>
+          Purpose
+          <input type="text" id="edit-place-purpose" required />
+        </label>
+        <label class="wide">
+          Description / Details
+          <input type="text" id="edit-place-details" />
+        </label>
+        <label class="wide">
+          Address
+          <input type="text" id="edit-place-address" required />
+        </label>
+        <label class="wide">
+          Add More Photos
+          <input type="file" id="edit-place-photos" accept="image/*" multiple />
+        </label>
+        <div class="wide">
+          <p class="mini-title">Paste Photos from Clipboard</p>
+          <div id="edit-paste-zone" class="paste-zone" tabindex="0">Click here, then press Ctrl+V / Cmd+V to paste image(s).</div>
+        </div>
+        <div class="wide">
+          <p class="mini-title">Current Photos</p>
+          <div id="edit-photo-list" class="photo-list"></div>
+        </div>
+        <button type="submit">Save Changes</button>
+      </form>
+      <p id="edit-message" class="form-message" aria-live="polite"></p>
+    </div>
+  </div>
+
+  <div id="photo-lightbox" class="lightbox hidden" role="dialog" aria-modal="true" aria-label="Photo viewer">
+    <button type="button" id="close-lightbox" class="lightbox-close">Close</button>
+    <img id="lightbox-image" class="lightbox-image" alt="Enlarged photo" />
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="data/seed-places.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
