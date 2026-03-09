@@ -17,6 +17,7 @@
       <p class="subtitle">Filter by purpose and area, sort however you want, and add your own spots.</p>
       <p id="backend-status" class="backend-status">Connecting to shared database...</p>
       <p id="current-user" class="current-user">User: Not set</p>
+      <button type="button" id="open-help" class="help-btn">How to Use</button>
       <div class="hero-stats">
         <article class="stat">
           <p class="stat-label">Total Places</p>
@@ -255,6 +256,22 @@
     </div>
   </div>
 
+  <div id="help-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="help-title">
+    <div class="modal-card help-card">
+      <div class="modal-head">
+        <h3 id="help-title">How to Use Japan Places</h3>
+        <button type="button" id="close-help" class="ghost-btn">Close</button>
+      </div>
+      <div class="help-body">
+        <p><strong>1.</strong> Set your name when prompted. Your name appears in the <code>Source</code> column when you add or edit places.</p>
+        <p><strong>2.</strong> Use <code>Find Places</code> first for planning.</p>
+        <p class="help-focus"><strong>Focus flow:</strong> search by keyword, then narrow by <code>Area</code> and <code>Purpose</code>, then sort results to plan route order.</p>
+        <p><strong>3.</strong> Add new <code>Area</code> or <code>Purpose</code> in <code>Manage Area / Purpose Options</code> before adding places.</p>
+        <p><strong>4.</strong> Add places, paste/upload photos, and use <code>Edit</code> to keep details current.</p>
+        <p><strong>5.</strong> Use map preview + Google Maps link to navigate.</p>
+      </div>
+    </div>
+  </div>
   <div id="photo-lightbox" class="lightbox hidden" role="dialog" aria-modal="true" aria-label="Photo viewer">
     <button type="button" id="close-lightbox" class="lightbox-close">Close</button>
     <img id="lightbox-image" class="lightbox-image" alt="Enlarged photo" />
@@ -266,3 +283,5 @@
   <script src="app.js"></script>
 </body>
 </html>
+
+

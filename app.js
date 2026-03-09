@@ -55,6 +55,9 @@ const el = {
   lightbox: document.getElementById("photo-lightbox"),
   lightboxImage: document.getElementById("lightbox-image"),
   closeLightbox: document.getElementById("close-lightbox"),
+  openHelp: document.getElementById("open-help"),
+  closeHelp: document.getElementById("close-help"),
+  helpModal: document.getElementById("help-modal"),
   confirmDeleteModal: document.getElementById("confirm-delete-modal"),
   confirmDeleteText: document.getElementById("confirm-delete-text"),
   cancelDelete: document.getElementById("cancel-delete"),
@@ -1007,6 +1010,19 @@ function setupEventHandlers() {
     await loadManagedOptions();
   });
 
+  el.openHelp.addEventListener("click", () => {
+    el.helpModal.classList.remove("hidden");
+  });
+
+  el.closeHelp.addEventListener("click", () => {
+    el.helpModal.classList.add("hidden");
+  });
+
+  el.helpModal.addEventListener("click", (event) => {
+    if (event.target === el.helpModal) {
+      el.helpModal.classList.add("hidden");
+    }
+  });
   el.closeLightbox.addEventListener("click", closeLightbox);
   el.lightbox.addEventListener("click", (event) => {
     if (event.target === el.lightbox) {
@@ -1022,6 +1038,11 @@ function setupEventHandlers() {
 
     if (event.key === "Escape" && !el.confirmDeleteModal.classList.contains("hidden")) {
       closeDeleteConfirm();
+      return;
+    }
+
+    if (event.key === "Escape" && !el.helpModal.classList.contains("hidden")) {
+      el.helpModal.classList.add("hidden");
       return;
     }
 
@@ -1059,3 +1080,7 @@ async function init() {
 }
 
 init();
+
+
+
+

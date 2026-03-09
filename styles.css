@@ -530,3 +530,34 @@ tr:hover td {
   display: grid;
   gap: 0.6rem;
 }
+.help-btn {
+  width: auto;
+  justify-self: start;
+  background: rgba(255,255,255,0.16);
+  border: 1px solid rgba(255,255,255,0.28);
+  color: #e9fffa;
+  padding: 0.4rem 0.65rem;
+  margin-bottom: 0.8rem;
+}
+
+.help-card {
+  max-width: 760px;
+}
+
+.help-body {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.help-body p {
+  margin: 0;
+  color: #334255;
+}
+
+.help-focus {
+  background: #fff6d8;
+  border: 1px solid #f0d98b;
+  border-radius: 10px;
+  padding: 0.6rem;
+  color: #3c2c02;
+}
