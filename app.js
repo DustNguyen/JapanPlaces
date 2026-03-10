@@ -554,6 +554,14 @@ function renderTable() {
       removeButton.textContent = "Remove";
       removeButton.disabled = !hasBackend;
       removeButton.dataset.placeId = place.id;
+      removeButton.addEventListener("click", (event) => {
+        if (!hasBackend) {
+          setFormMessage("Connect Supabase first to edit shared data.", false);
+          return;
+        }
+        event.stopPropagation();
+        openDeleteConfirm(place);
+      });
       actionRow.appendChild(removeButton);
 
       actionCell.appendChild(actionRow);
@@ -908,13 +916,17 @@ function setupEventHandlers() {
   el.resetFilters.addEventListener("click", resetFilters);
 
   el.tableBody.addEventListener("click", (event) => {
-    const photo = event.target.closest(".photo-thumb");
+    const target = event.target && event.target.closest ? event.target : event.target?.parentElement;
+    if (!target || !target.closest) {
+      return;
+    }
+    const photo = target.closest(".photo-thumb");
     if (photo) {
       openLightbox(photo.src, photo.alt);
       return;
     }
 
-    const removeButton = event.target.closest("button.delete-btn");
+    const removeButton = target.closest("button.delete-btn");
     if (removeButton) {
       if (!hasBackend) {
         setFormMessage("Connect Supabase first to edit shared data.", false);
@@ -1336,6 +1348,13 @@ async function init() {
 }
 
 init();
+
+
+
+
+
+
+
 
 
 
