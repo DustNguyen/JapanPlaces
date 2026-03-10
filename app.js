@@ -87,6 +87,7 @@ let places = [];
 let areaOptions = [];
 let purposeOptions = [];
 let currentFilteredRows = [];
+let handlersBound = false;
 let selectedMapPlaceId = "";
 let editingPlaceId = "";
 let pendingDeletePlace = null;
@@ -903,6 +904,10 @@ function setupRealtime() {
 }
 
 function setupEventHandlers() {
+  if (handlersBound) {
+    return;
+  }
+  handlersBound = true;
   [el.searchInput, el.areaFilter, el.purposeFilter, el.sortField, el.sortDirection].forEach((input) => {
     input.addEventListener("input", render);
     input.addEventListener("change", render);
@@ -1368,7 +1373,18 @@ async function init() {
   setupRealtime();
 }
 
+setupEventHandlers();
+
 init();
+
+
+
+
+
+
+
+
+
 
 
 
