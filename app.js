@@ -1345,6 +1345,11 @@ function setupEventHandlers() {
 }
 
 async function init() {
+  const jsIndicator = document.getElementById("js-indicator");
+  if (jsIndicator) {
+    jsIndicator.textContent = "JS: active";
+    jsIndicator.classList.add("ok");
+  }
   const storedName = readStoredUserName();
   setCurrentUser(storedName);
 
@@ -1374,7 +1379,17 @@ async function init() {
 
 setupEventHandlers();
 
+window.addEventListener("error", () => {
+  const jsIndicator = document.getElementById("js-indicator");
+  if (jsIndicator) {
+    jsIndicator.textContent = "JS: error";
+    jsIndicator.classList.add("error");
+  }
+});
+
 init();
+
+
 
 
 
