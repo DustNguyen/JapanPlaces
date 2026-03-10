@@ -1076,9 +1076,7 @@ function setupEventHandlers() {
 
   el.closeEditModal.addEventListener("click", closeEditModal);
   el.editModal.addEventListener("click", (event) => {
-    if (event.target === el.editModal) {
-      await logActivity("updated", { id: editingPlaceId, name: payload.name });
-      closeEditModal();
+    if (event.target === el.editModal) {      closeEditModal();
     }
   });
 
@@ -1150,10 +1148,7 @@ function setupEventHandlers() {
       if (error) {
         setEditMessage(`Save failed: ${error.message}`, false);
         return;
-      }
-
-      await logActivity("updated", { id: editingPlaceId, name: payload.name });
-      closeEditModal();
+      }      closeEditModal();
       setFormMessage("Place updated.", true);
       await loadPlaces();
       await loadManagedOptions();
@@ -1277,9 +1272,7 @@ function setupEventHandlers() {
   });
 
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && !el.editModal.classList.contains("hidden")) {
-      await logActivity("updated", { id: editingPlaceId, name: payload.name });
-      closeEditModal();
+    if (event.key === "Escape" && !el.editModal.classList.contains("hidden")) {      closeEditModal();
       return;
     }
 
@@ -1328,6 +1321,7 @@ async function init() {
 }
 
 init();
+
 
 
 
