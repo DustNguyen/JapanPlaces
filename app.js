@@ -528,12 +528,25 @@ function updateMap() {
   el.mapEmpty.style.display = "none";
 }
 
-function openDeleteConfirm(place) {\r\n  pendingDeletePlace = place;\r\n  const modal = document.getElementById("confirm-delete-modal");\r\n  const text = document.getElementById("confirm-delete-text");\r\n  if (text) {\r\n    text.textContent = `Remove "${place.name}" from the list?`;\r\n  }\r\n  if (modal) {\r\n    modal.classList.remove("hidden");\r\n  }\r\n}" from the list?`;
-  el.confirmDeleteModal.classList.remove("hidden");
+function openDeleteConfirm(place) {
+  pendingDeletePlace = place;
+  const modal = document.getElementById("confirm-delete-modal");
+  const text = document.getElementById("confirm-delete-text");
+  if (text) {
+    text.textContent = "Remove \"" + place.name + "\" from the list?";
+  }
+  if (modal) {
+    modal.classList.remove("hidden");
+  }
 }
 
-function closeDeleteConfirm() {\r\n  pendingDeletePlace = null;\r\n  const modal = document.getElementById("confirm-delete-modal");\r\n  if (modal) {\r\n    modal.classList.add("hidden");\r\n  }\r\n}
-
+function closeDeleteConfirm() {
+  pendingDeletePlace = null;
+  const modal = document.getElementById("confirm-delete-modal");
+  if (modal) {
+    modal.classList.add("hidden");
+  }
+}
 function renderTable() {
   currentFilteredRows = applyFiltersAndSort();
   el.tableBody.innerHTML = "";
@@ -1443,6 +1456,7 @@ window.addEventListener("error", () => {
 });
 
 init();
+
 
 
 
