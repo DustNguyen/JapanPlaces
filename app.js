@@ -312,9 +312,6 @@ window.closeHelpIfBackdrop = (event) => {
     el.helpModal.classList.add("hidden");
   }
 };
-  el.lightboxImage.removeAttribute("src");
-  el.lightbox.classList.add("hidden");
-}
 
 function resolveDraftSrc(item) {
   return item.kind === "url" ? item.value : item.dataUrl;
@@ -1414,6 +1411,7 @@ window.addEventListener("error", () => {
 });
 
 init();
+
 
 
 
