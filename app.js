@@ -349,7 +349,7 @@ function makePhotoThumbnail(src, index, withRemove, onRemove) {
   img.src = src;
   img.alt = `Photo ${index + 1}`;
   img.dataset.src = src;
-  img.setAttribute("onclick", "handlePhotoClick(this.dataset.src, this.alt)");
+  img.setAttribute("onclick", "window.handlePhotoClick(this.dataset.src, this.alt)");
   wrap.appendChild(img);
 
   if (withRemove && typeof onRemove === "function") {
@@ -619,7 +619,7 @@ function renderTable() {
       removeButton.textContent = "Remove";
       removeButton.disabled = !hasBackend;
       removeButton.dataset.placeId = place.id;
-      removeButton.setAttribute("onclick", "handleRemoveClick(this.dataset.placeId)");
+      removeButton.setAttribute("onclick", "window.handleRemoveClick(this.dataset.placeId)");
       actionRow.appendChild(removeButton);
 
       actionCell.appendChild(actionRow);
@@ -1465,6 +1465,7 @@ window.addEventListener("error", () => {
 });
 
 init();
+
 
 
 

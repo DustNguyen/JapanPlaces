@@ -20,7 +20,7 @@
       <p class="subtitle">Filter by purpose and area, sort however you want, and add your own spots.</p>
       <p id="backend-status" class="backend-status">Connecting to shared database...</p>
       <p id="current-user" class="current-user">User: Not set</p>
-      <button type="button" id="open-help" class="help-btn" onclick="openHelpModal()">How to Use</button>
+      <button type="button" id="open-help" class="help-btn" onclick="window.openHelpModal()">How to Use</button>
       <div class="hero-stats">
         <article class="stat">
           <p class="stat-label">Total Places</p>
@@ -282,11 +282,11 @@
     </div>
   </div>
 
-  <div id="help-modal" class="modal hidden" onclick="closeHelpIfBackdrop(event)" role="dialog" aria-modal="true" aria-labelledby="help-title">
+  <div id="help-modal" class="modal hidden" onclick="window.closeHelpIfBackdrop(event)" role="dialog" aria-modal="true" aria-labelledby="help-title">
     <div class="modal-card help-card">
       <div class="modal-head">
         <h3 id="help-title">How to Use Japan Places</h3>
-        <button type="button" id="close-help" class="ghost-btn" onclick="closeHelpModal()">Close</button>
+        <button type="button" id="close-help" class="ghost-btn" onclick="window.closeHelpModal()">Close</button>
       </div>
       <div class="help-body">
         <p><strong>1.</strong> Set your name when prompted. Your name appears in the <code>Source</code> column when you add or edit places.</p>
@@ -306,9 +306,11 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
   <script src="data/seed-places.js"></script>
-  <script src="app.js?v=20260324"></script>
+  <script src="app.js?v=20260325"></script>
 </body>
 </html>
+
+
 
 
 
