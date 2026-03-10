@@ -921,31 +921,28 @@ function setupEventHandlers() {
   el.resetFilters.addEventListener("click", resetFilters);
 
   document.addEventListener("click", (event) => {
-    const photo = event.target.closest && event.target.closest(".photo-thumb");
-    if (photo) {
-      openLightbox(photo.src, photo.alt);
-      return;
-    }
-
-    const removeButton = event.target.closest && event.target.closest("button.delete-btn");
-    if (removeButton) {
-      if (!hasBackend) {
-        setFormMessage("Connect Supabase first to edit shared data.", false);
-        return;
-      }
-      const placeId = removeButton.dataset.placeId;
-      const place = places.find((item) => item.id === placeId);
-      if (place) {
-        openDeleteConfirm(place);
-      }
-    }
-  }, true);
-
-  el.tableBody.addEventListener("click", (event) => {
     const target = event.target && event.target.closest ? event.target : event.target?.parentElement;
     if (!target || !target.closest) {
       return;
     }
+
+    const helpOpen = target.closest("#open-help");
+    if (helpOpen) {
+      el.helpModal.classList.remove("hidden");
+      return;
+    }
+
+    const helpClose = target.closest("#close-help");
+    if (helpClose) {
+      el.helpModal.classList.add("hidden");
+      return;
+    }
+
+    if (target === el.helpModal) {
+      el.helpModal.classList.add("hidden");
+      return;
+    }
+
     const photo = target.closest(".photo-thumb");
     if (photo) {
       openLightbox(photo.src, photo.alt);
@@ -964,7 +961,9 @@ function setupEventHandlers() {
         openDeleteConfirm(place);
       }
     }
-  });
+  }, true);
+
+  
 
   el.userForm.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -1376,6 +1375,9 @@ async function init() {
 setupEventHandlers();
 
 init();
+
+
+
 
 
 
