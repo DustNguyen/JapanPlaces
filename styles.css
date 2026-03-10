@@ -715,3 +715,25 @@ tr:hover td {
   color: #fff0f0;
 }
 
+
+/* Debug overlay */
+.debug-overlay {
+  align-self: flex-start;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.debug-overlay.ok {
+  background: rgba(60, 207, 152, 0.22);
+  color: #e7fff3;
+}
+
+.debug-overlay.error {
+  background: rgba(232, 97, 97, 0.2);
+  color: #fff0f0;
+}
+

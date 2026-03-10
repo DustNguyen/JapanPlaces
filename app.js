@@ -771,6 +771,23 @@ async function loadComments(placeId) {
   renderComments(placeId);
 }
 
+function updateDebugOverlay() {
+  const overlay = document.getElementById("debug-overlay");
+  if (!overlay) {
+    return;
+  }
+  const help = document.getElementById("help-modal");
+  const lightbox = document.getElementById("photo-lightbox");
+  const status = `help:${help ? "ok" : "miss"} lightbox:${lightbox ? "ok" : "miss"}`;
+  overlay.textContent = status;
+  overlay.classList.remove("ok", "error");
+  if (help && lightbox) {
+    overlay.classList.add("ok");
+  } else {
+    overlay.classList.add("error");
+  }
+}
+
 function updateLastEditedMeta(place) {
   if (!el.editLastUpdated) {
     return;
@@ -908,12 +925,14 @@ function openEditModal(placeId) {
   renderEditPhotoList();
   setEditMessage("", false);
   el.editModal.classList.remove("hidden");
+  updateDebugOverlay();
 }
 
 function closeEditModal() {
   editingPlaceId = "";
   editingDraftPhotos = [];
   el.editModal.classList.add("hidden");
+  updateDebugOverlay();
   setEditMessage("", false);
 }
 function setupRealtime() {
@@ -1418,6 +1437,7 @@ async function init() {
 }
 
 setupEventHandlers();
+  updateDebugOverlay();
 
 window.addEventListener("error", () => {
   const jsIndicator = document.getElementById("js-indicator");
@@ -1428,6 +1448,8 @@ window.addEventListener("error", () => {
 });
 
 init();
+
+
 
 
 
