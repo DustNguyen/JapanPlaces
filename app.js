@@ -1,5 +1,7 @@
 
 const TABLE_NAME = "places";
+const COMMENT_TABLE = "place_comments";
+const ACTIVITY_TABLE = "activity_log";
 const AREA_TABLE = "place_areas";
 const PURPOSE_TABLE = "place_purposes";
 const USER_NAME_KEY = "japan_places_user_name_v1";
@@ -65,6 +67,15 @@ const el = {
   userModal: document.getElementById("user-modal"),
   userForm: document.getElementById("user-form"),
   userNameInput: document.getElementById("user-name-input"),
+  activityLog: document.getElementById("activity-log"),
+  undoBanner: document.getElementById("undo-banner"),
+  undoText: document.getElementById("undo-text"),
+  undoDelete: document.getElementById("undo-delete"),
+  editLastUpdated: document.getElementById("edit-last-updated"),
+  commentsList: document.getElementById("comments-list"),
+  commentForm: document.getElementById("comment-form"),
+  commentInput: document.getElementById("comment-input"),
+  commentSubmit: document.getElementById("comment-submit"),
 };
 
 const config = window.APP_CONFIG || {};
@@ -82,6 +93,10 @@ let pendingDeletePlace = null;
 let editingDraftPhotos = [];
 let addDraftPhotos = [];
 let realtimeChannel = null;
+let commentsByPlace = new Map();
+let activityLog = [];
+let lastDeleted = null;
+let undoTimer = null;
 let currentUserName = "";
 let optionTablesReady = false;
 
@@ -142,6 +157,104 @@ function byTextAsc(a, b) {
   return a.localeCompare(b, undefined, { sensitivity: "base" });
 }
 
+function formatRelativeTime(dateString) {
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) {
+    return "just now";
+  }
+
+  const diffMs = Date.now() - date.getTime();
+  const diffSec = Math.max(0, Math.floor(diffMs / 1000));
+  if (diffSec < 60) {
+    return `${diffSec}s ago`;
+  }
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) {
+    return `${diffMin}m ago`;
+  }
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) {
+    return `${diffHr}h ago`;
+  }
+  const diffDay = Math.floor(diffHr / 24);
+  return `${diffDay}d ago`;
+}
+
+function renderActivityLog() {
+  if (!el.activityLog) {
+    return;
+  }
+  el.activityLog.innerHTML = "";
+  if (!activityLog.length) {
+    el.activityLog.innerHTML = '<p class="muted">No activity yet.</p>';
+    return;
+  }
+
+  activityLog.forEach((entry) => {
+    const item = document.createElement("div");
+    item.className = "activity-item";
+    const text = document.createElement("span");
+    text.textContent = entry.message;
+    const time = document.createElement("span");
+    time.className = "activity-time";
+    time.textContent = `\u00B7 ${formatRelativeTime(entry.created_at)}`;
+    item.appendChild(text);
+    item.appendChild(time);
+    el.activityLog.appendChild(item);
+  });
+}
+
+function renderComments(placeId) {
+  if (!el.commentsList) {
+    return;
+  }
+  const comments = commentsByPlace.get(placeId) || [];
+  el.commentsList.innerHTML = "";
+
+  if (!comments.length) {
+    el.commentsList.innerHTML = '<p class="muted">No comments yet.</p>';
+    return;
+  }
+
+  comments.forEach((comment) => {
+    const item = document.createElement("div");
+    item.className = "comment-item";
+    const meta = document.createElement("div");
+    meta.className = "comment-meta";
+    meta.textContent = `${comment.author} · ${formatRelativeTime(comment.created_at)}`;
+    const body = document.createElement("div");
+    body.textContent = comment.body;
+    item.appendChild(meta);
+    item.appendChild(body);
+    el.commentsList.appendChild(item);
+  });
+}
+
+function showUndoBanner(message) {
+  if (!el.undoBanner) {
+    return;
+  }
+  el.undoText.textContent = message;
+  el.undoBanner.classList.remove("hidden");
+  if (undoTimer) {
+    clearTimeout(undoTimer);
+  }
+  undoTimer = setTimeout(() => {
+    el.undoBanner.classList.add("hidden");
+    lastDeleted = null;
+  }, 10000);
+}
+
+function hideUndoBanner() {
+  if (!el.undoBanner) {
+    return;
+  }
+  el.undoBanner.classList.add("hidden");
+  if (undoTimer) {
+    clearTimeout(undoTimer);
+  }
+  undoTimer = null;
+}
 function normalizePlace(raw, fallbackId) {
   return {
     id: raw.id || fallbackId,
@@ -572,6 +685,60 @@ async function resolveDraftPhotoUrls(drafts) {
   return urls;
 }
 
+async function logActivity(action, place) {
+  if (!hasBackend || !currentUserName) {
+    return;
+  }
+  const message = `${currentUserName} ${action} ${place.name}`;
+  await supabaseClient.from(ACTIVITY_TABLE).insert({
+    place_id: place.id,
+    user_name: currentUserName,
+    action,
+    message,
+  });
+}
+
+async function loadActivityLog() {
+  if (!hasBackend) {
+    activityLog = [];
+    renderActivityLog();
+    return;
+  }
+  const { data } = await supabaseClient
+    .from(ACTIVITY_TABLE)
+    .select("id,message,created_at")
+    .order("created_at", { ascending: false })
+    .limit(50);
+  activityLog = data || [];
+  renderActivityLog();
+}
+
+async function loadComments(placeId) {
+  if (!hasBackend || !placeId) {
+    commentsByPlace.set(placeId, []);
+    renderComments(placeId);
+    return;
+  }
+  const { data } = await supabaseClient
+    .from(COMMENT_TABLE)
+    .select("id,place_id,author,body,created_at")
+    .eq("place_id", placeId)
+    .order("created_at", { ascending: true });
+  commentsByPlace.set(placeId, data || []);
+  renderComments(placeId);
+}
+
+function updateLastEditedMeta(place) {
+  if (!el.editLastUpdated) {
+    return;
+  }
+  if (!place || !place.updated_at) {
+    el.editLastUpdated.textContent = "-";
+    return;
+  }
+  const name = place.last_edited_by ? place.last_edited_by : "Unknown";
+  el.editLastUpdated.textContent = `${name} · ${formatRelativeTime(place.updated_at)}`;
+}
 async function loadPlaces() {
   if (!hasBackend) {
     const seedData = Array.isArray(window.SEED_PLACES) ? window.SEED_PLACES : [];
@@ -585,7 +752,7 @@ async function loadPlaces() {
 
   const { data, error } = await supabaseClient
     .from(TABLE_NAME)
-    .select("id,name,area,purpose,details,address,photos,source,created_at")
+    .select("id,name,area,purpose,details,address,photos,source,created_at,updated_at,last_edited_by")
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -685,6 +852,9 @@ function openEditModal(placeId) {
   editingPlaceId = placeId;
   editingDraftPhotos = place.photos.map((url) => ({ kind: "url", value: url }));
 
+  updateLastEditedMeta(place);
+  loadComments(placeId);
+
   el.editName.value = place.name;
   el.editArea.value = place.area;
   el.editPurpose.value = place.purpose;
@@ -718,6 +888,14 @@ function setupRealtime() {
     })
     .on("postgres_changes", { event: "*", schema: "public", table: PURPOSE_TABLE }, () => {
       loadManagedOptions();
+    })
+    .on("postgres_changes", { event: "*", schema: "public", table: COMMENT_TABLE }, () => {
+      if (editingPlaceId) {
+        loadComments(editingPlaceId);
+      }
+    })
+    .on("postgres_changes", { event: "*", schema: "public", table: ACTIVITY_TABLE }, () => {
+      loadActivityLog();
     })
     .subscribe();
 }
@@ -871,16 +1049,19 @@ function setupEventHandlers() {
 
     try {
       const photoUrls = await resolveDraftPhotoUrls(addDraftPhotos);
-      const { error } = await supabaseClient.from(TABLE_NAME).insert({
+      const { data: inserted, error } = await supabaseClient.from(TABLE_NAME).insert({
         ...draft,
         photos: photoUrls,
         source: currentUserName,
+        last_edited_by: currentUserName,
       });
 
       if (error) {
         setFormMessage(`Save failed: ${error.message}`, false);
         return;
       }
+
+      if (inserted) { await logActivity("added", inserted); }
 
       el.addForm.reset();
       addDraftPhotos = [];
@@ -896,6 +1077,7 @@ function setupEventHandlers() {
   el.closeEditModal.addEventListener("click", closeEditModal);
   el.editModal.addEventListener("click", (event) => {
     if (event.target === el.editModal) {
+      await logActivity("updated", { id: editingPlaceId, name: payload.name });
       closeEditModal();
     }
   });
@@ -950,6 +1132,7 @@ function setupEventHandlers() {
       details: el.editDetails.value.trim(),
       address: el.editAddress.value.trim(),
       source: currentUserName,
+        last_edited_by: currentUserName,
     };
 
     if (!payload.name || !payload.address || !payload.area || !payload.purpose) {
@@ -961,7 +1144,7 @@ function setupEventHandlers() {
       const photoUrls = await resolveDraftPhotoUrls(editingDraftPhotos);
       const { error } = await supabaseClient
         .from(TABLE_NAME)
-        .update({ ...payload, photos: photoUrls, updated_at: new Date().toISOString() })
+        .update({ ...payload, photos: photoUrls, updated_at: new Date().toISOString(), last_edited_by: currentUserName })
         .eq("id", editingPlaceId);
 
       if (error) {
@@ -969,6 +1152,7 @@ function setupEventHandlers() {
         return;
       }
 
+      await logActivity("updated", { id: editingPlaceId, name: payload.name });
       closeEditModal();
       setFormMessage("Place updated.", true);
       await loadPlaces();
@@ -978,6 +1162,34 @@ function setupEventHandlers() {
     }
   });
 
+  el.commentSubmit.addEventListener("click", async (event) => {
+    event.preventDefault();
+    if (!editingPlaceId || !hasBackend) {
+      return;
+    }
+    if (!ensureCurrentUser()) {
+      setEditMessage("Set your name first.", false);
+      return;
+    }
+    const body = (el.commentInput.value || "").trim();
+    if (!body) {
+      return;
+    }
+
+    const { error } = await supabaseClient.from(COMMENT_TABLE).insert({
+      place_id: editingPlaceId,
+      author: currentUserName,
+      body,
+    });
+
+    if (error) {
+      setEditMessage('Comment failed: ' + error.message, false);
+      return;
+    }
+
+    el.commentInput.value = "";
+    await loadComments(editingPlaceId);
+  });
   el.cancelDelete.addEventListener("click", closeDeleteConfirm);
   el.confirmDeleteModal.addEventListener("click", (event) => {
     if (event.target === el.confirmDeleteModal) {
@@ -999,17 +1211,51 @@ function setupEventHandlers() {
     const target = pendingDeletePlace;
     closeDeleteConfirm();
 
-    const { error } = await supabaseClient.from(TABLE_NAME).delete().eq("id", target.id);
+    const { data: deleted, error } = await supabaseClient.from(TABLE_NAME).delete().eq("id", target.id).select("id,name,area,purpose,details,address,photos,source,last_edited_by").single();
     if (error) {
       setFormMessage(`Delete failed: ${error.message}`, false);
       return;
     }
 
+    if (deleted) {
+      lastDeleted = deleted;
+      showUndoBanner(`Removed ${deleted.name}. You can undo for 10s.`);
+      await logActivity("removed", deleted);
+    }
     setFormMessage("Place removed.", true);
     await loadPlaces();
     await loadManagedOptions();
   });
 
+  el.undoDelete.addEventListener("click", async () => {
+    if (!lastDeleted || !hasBackend) {
+      return;
+    }
+    const restore = lastDeleted;
+    lastDeleted = null;
+    hideUndoBanner();
+
+    const { error } = await supabaseClient.from(TABLE_NAME).insert({
+      name: restore.name,
+      area: restore.area,
+      purpose: restore.purpose,
+      details: restore.details,
+      address: restore.address,
+      photos: restore.photos || [],
+      source: restore.source || currentUserName,
+      last_edited_by: currentUserName,
+    });
+
+    if (error) {
+      setFormMessage('Undo failed: ' + error.message, false);
+      return;
+    }
+
+    await logActivity("restored", restore);
+    setFormMessage("Place restored.", true);
+    await loadPlaces();
+    await loadManagedOptions();
+  });
   el.openHelp.addEventListener("click", () => {
     el.helpModal.classList.remove("hidden");
   });
@@ -1032,6 +1278,7 @@ function setupEventHandlers() {
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && !el.editModal.classList.contains("hidden")) {
+      await logActivity("updated", { id: editingPlaceId, name: payload.name });
       closeEditModal();
       return;
     }
@@ -1074,12 +1321,37 @@ async function init() {
   await bootstrapSeedPlacesIfEmpty();
   await loadPlaces();
   await loadManagedOptions();
+  await loadActivityLog();
   setupEventHandlers();
   renderAddPhotoList();
   setupRealtime();
 }
 
 init();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

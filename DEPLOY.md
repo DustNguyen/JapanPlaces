@@ -46,3 +46,6 @@ If you want limited editing, we can switch to Supabase Auth + protected policies
 
 ## If you already deployed earlier
 Run `supabase/schema.sql` again in SQL Editor after pulling latest code. The script is idempotent and will create/update the Area/Purpose option tables used by the new dropdown management UI.
+
+## Activity log + comments
+If you deployed earlier, run `supabase/schema.sql` again to create the `activity_log` and `place_comments` tables used for collaboration features.

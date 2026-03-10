@@ -74,6 +74,13 @@
       </form>
     </section>
 
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Activity Log</h2>
+      </div>
+      <p class="panel-subtitle">Latest 50 changes across the team.</p>
+      <div id="activity-log" class="activity-log"></div>
+    </section>
     <section class="panel map-panel">
       <div class="panel-header">
         <h2>Map View</h2>
@@ -165,6 +172,10 @@
       <div class="panel-header">
         <h2>Places List</h2>
       </div>
+      <div id="undo-banner" class="undo-banner hidden">
+        <span id="undo-text"></span>
+        <button type="button" id="undo-delete">Undo</button>
+      </div>
       <div class="table-wrap">
         <table>
           <thead>
@@ -226,6 +237,17 @@
           <p class="mini-title">Current Photos</p>
           <div id="edit-photo-list" class="photo-list"></div>
         </div>
+        <div class="wide">
+          <p class="mini-title">Last Updated</p>
+          <p id="edit-last-updated" class="meta-line">-</p>
+        </div>
+        <div class="wide">
+          <p class="mini-title">Comments</p>
+          <div id="comments-list" class="comment-list"></div>
+          <div id="comment-form" class="comment-form">
+            <input type="text" id="comment-input" placeholder="Add a short note..." maxlength="200" />
+            <button type="button" id="comment-submit">Add Comment</button>
+          </div>
         <button type="submit">Save Changes</button>
       </form>
       <p id="edit-message" class="form-message" aria-live="polite"></p>
@@ -283,5 +305,19 @@
   <script src="app.js"></script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

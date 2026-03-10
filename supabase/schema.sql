@@ -173,3 +173,51 @@ select distinct purpose, 'System'
 from public.places
 where coalesce(purpose, '') <> ''
 on conflict (name) do nothing;
+
+-- Activity log + comments
+create table if not exists public.activity_log (
+  id uuid primary key default gen_random_uuid(),
+  place_id uuid,
+  user_name text not null default '',
+  action text not null default '',
+  message text not null default '',
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.place_comments (
+  id uuid primary key default gen_random_uuid(),
+  place_id uuid not null references public.places(id) on delete cascade,
+  author text not null default '',
+  body text not null,
+  created_at timestamptz not null default now()
+);
+
+alter table public.activity_log enable row level security;
+alter table public.place_comments enable row level security;
+
+drop policy if exists "Public read activity" on public.activity_log;
+create policy "Public read activity"
+on public.activity_log for select
+to anon, authenticated
+using (true);
+
+drop policy if exists "Public insert activity" on public.activity_log;
+create policy "Public insert activity"
+on public.activity_log for insert
+to anon, authenticated
+with check (true);
+
+drop policy if exists "Public read comments" on public.place_comments;
+create policy "Public read comments"
+on public.place_comments for select
+to anon, authenticated
+using (true);
+
+drop policy if exists "Public insert comments" on public.place_comments;
+create policy "Public insert comments"
+on public.place_comments for insert
+to anon, authenticated
+with check (true);
+
+-- Track last editor for places
+alter table public.places add column if not exists last_edited_by text not null default '';
