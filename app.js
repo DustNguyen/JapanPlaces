@@ -311,11 +311,30 @@ window.handleRemoveClick = (placeId) => {
   }
 };
 
-window.openHelpModal = () => {\r\n  const modal = document.getElementById("help-modal");\r\n  if (modal) {\r\n    modal.classList.remove("hidden");\r\n    modal.style.display = "flex";\r\n    modal.style.zIndex = "1000";\r\n  }\r\n};
+window.openHelpModal = () => {
+  const modal = document.getElementById("help-modal");
+  if (modal) {
+    modal.classList.remove("hidden");
+    modal.style.display = "flex";
+    modal.style.zIndex = "1000";
+  }
+};
 
-window.closeHelpModal = () => {\r\n  const modal = document.getElementById("help-modal");\r\n  if (modal) {\r\n    modal.classList.add("hidden");\r\n    modal.style.display = "none";\r\n  }\r\n};
+window.closeHelpModal = () => {
+  const modal = document.getElementById("help-modal");
+  if (modal) {
+    modal.classList.add("hidden");
+    modal.style.display = "none";
+  }
+};
 
-window.closeHelpIfBackdrop = (event) => {\r\n  const modal = document.getElementById("help-modal");\r\n  if (modal && event.target === modal) {\r\n    modal.classList.add("hidden");\r\n    modal.style.display = "none";\r\n  }\r\n};
+window.closeHelpIfBackdrop = (event) => {
+  const modal = document.getElementById("help-modal");
+  if (modal && event.target === modal) {
+    modal.classList.add("hidden");
+    modal.style.display = "none";
+  }
+};
 
 function resolveDraftSrc(item) {
   return item.kind === "url" ? item.value : item.dataUrl;
@@ -515,13 +534,32 @@ function updateMap() {
   el.mapEmpty.style.display = "none";
 }
 
-function openDeleteConfirm(place) {\r\n  pendingDeletePlace = place;\r\n  const modal = document.getElementById("confirm-delete-modal");\r\n  const text = document.getElementById("confirm-delete-text");\r\n  if (text) {\r\n    text.textContent = "Remove \"" + place.name + "\" from the list?";\r\n  }\r\n  if (modal) {\r\n    modal.classList.remove("hidden");\r\n    modal.style.display = "flex";\r\n    modal.style.zIndex = "1000";\r\n  }\r\n}
+function openDeleteConfirm(place) {
+  pendingDeletePlace = place;
+  const modal = document.getElementById("confirm-delete-modal");
+  const text = document.getElementById("confirm-delete-text");
+  if (text) {
+    text.textContent = "Remove \"" + place.name + "\" from the list?";
+  }
+  if (modal) {
+    modal.classList.remove("hidden");
+    modal.style.display = "flex";
+    modal.style.zIndex = "1000";
+  }
+}
   if (modal) {
     modal.classList.remove("hidden");
   }
 }
 
-function closeDeleteConfirm() {\r\n  pendingDeletePlace = null;\r\n  const modal = document.getElementById("confirm-delete-modal");\r\n  if (modal) {\r\n    modal.classList.add("hidden");\r\n    modal.style.display = "none";\r\n  }\r\n}
+function closeDeleteConfirm() {
+  pendingDeletePlace = null;
+  const modal = document.getElementById("confirm-delete-modal");
+  if (modal) {
+    modal.classList.add("hidden");
+    modal.style.display = "none";
+  }
+}
 }
 function renderTable() {
   currentFilteredRows = applyFiltersAndSort();
@@ -1432,6 +1470,7 @@ window.addEventListener("error", () => {
 });
 
 init();
+
 
 
 
