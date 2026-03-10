@@ -528,16 +528,11 @@ function updateMap() {
   el.mapEmpty.style.display = "none";
 }
 
-function openDeleteConfirm(place) {
-  pendingDeletePlace = place;
-  el.confirmDeleteText.textContent = `Remove "${place.name}" from the list?`;
+function openDeleteConfirm(place) {\r\n  pendingDeletePlace = place;\r\n  const modal = document.getElementById("confirm-delete-modal");\r\n  const text = document.getElementById("confirm-delete-text");\r\n  if (text) {\r\n    text.textContent = `Remove "${place.name}" from the list?`;\r\n  }\r\n  if (modal) {\r\n    modal.classList.remove("hidden");\r\n  }\r\n}" from the list?`;
   el.confirmDeleteModal.classList.remove("hidden");
 }
 
-function closeDeleteConfirm() {
-  pendingDeletePlace = null;
-  el.confirmDeleteModal.classList.add("hidden");
-}
+function closeDeleteConfirm() {\r\n  pendingDeletePlace = null;\r\n  const modal = document.getElementById("confirm-delete-modal");\r\n  if (modal) {\r\n    modal.classList.add("hidden");\r\n  }\r\n}
 
 function renderTable() {
   currentFilteredRows = applyFiltersAndSort();
@@ -1448,6 +1443,7 @@ window.addEventListener("error", () => {
 });
 
 init();
+
 
 
 
