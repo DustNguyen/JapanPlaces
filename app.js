@@ -547,10 +547,6 @@ function openDeleteConfirm(place) {
     modal.style.zIndex = "1000";
   }
 }
-  if (modal) {
-    modal.classList.remove("hidden");
-  }
-}
 
 function closeDeleteConfirm() {
   pendingDeletePlace = null;
@@ -559,7 +555,6 @@ function closeDeleteConfirm() {
     modal.classList.add("hidden");
     modal.style.display = "none";
   }
-}
 }
 function renderTable() {
   currentFilteredRows = applyFiltersAndSort();
@@ -1470,6 +1465,7 @@ window.addEventListener("error", () => {
 });
 
 init();
+
 
 
 
