@@ -284,6 +284,38 @@ function closeLightbox() {
   el.lightbox.classList.add("hidden");
 }
 
+window.handlePhotoClick = (src, altText) => {
+  openLightbox(src, altText);
+};
+
+window.handleRemoveClick = (placeId) => {
+  if (!hasBackend) {
+    setFormMessage("Connect Supabase first to edit shared data.", false);
+    return;
+  }
+  const place = places.find((item) => item.id === placeId);
+  if (place) {
+    openDeleteConfirm(place);
+  }
+};
+
+window.openHelpModal = () => {
+  el.helpModal.classList.remove("hidden");
+};
+
+window.closeHelpModal = () => {
+  el.helpModal.classList.add("hidden");
+};
+
+window.closeHelpIfBackdrop = (event) => {
+  if (event.target === el.helpModal) {
+    el.helpModal.classList.add("hidden");
+  }
+};
+  el.lightboxImage.removeAttribute("src");
+  el.lightbox.classList.add("hidden");
+}
+
 function resolveDraftSrc(item) {
   return item.kind === "url" ? item.value : item.dataUrl;
 }
@@ -296,7 +328,8 @@ function makePhotoThumbnail(src, index, withRemove, onRemove) {
   img.className = "photo-thumb";
   img.src = src;
   img.alt = `Photo ${index + 1}`;
-  img.addEventListener("click", () => openLightbox(src, img.alt));
+  img.dataset.src = src;
+  img.setAttribute("onclick", "handlePhotoClick(this.dataset.src, this.alt)");
   wrap.appendChild(img);
 
   if (withRemove && typeof onRemove === "function") {
@@ -555,14 +588,7 @@ function renderTable() {
       removeButton.textContent = "Remove";
       removeButton.disabled = !hasBackend;
       removeButton.dataset.placeId = place.id;
-      removeButton.addEventListener("click", (event) => {
-        if (!hasBackend) {
-          setFormMessage("Connect Supabase first to edit shared data.", false);
-          return;
-        }
-        event.stopPropagation();
-        openDeleteConfirm(place);
-      });
+      removeButton.setAttribute("onclick", "handleRemoveClick(this.dataset.placeId)");
       actionRow.appendChild(removeButton);
 
       actionCell.appendChild(actionRow);
@@ -1388,6 +1414,8 @@ window.addEventListener("error", () => {
 });
 
 init();
+
+
 
 
 
