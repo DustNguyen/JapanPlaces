@@ -274,14 +274,24 @@ function toMapsQuery(place) {
 }
 
 function openLightbox(src, altText) {
-  el.lightboxImage.src = src;
-  el.lightboxImage.alt = altText || "Enlarged photo";
-  el.lightbox.classList.remove("hidden");
+  const lightbox = document.getElementById("photo-lightbox");
+  const image = document.getElementById("lightbox-image");
+  if (!lightbox || !image) {
+    return;
+  }
+  image.src = src;
+  image.alt = altText || "Enlarged photo";
+  lightbox.classList.remove("hidden");
 }
 
 function closeLightbox() {
-  el.lightboxImage.removeAttribute("src");
-  el.lightbox.classList.add("hidden");
+  const lightbox = document.getElementById("photo-lightbox");
+  const image = document.getElementById("lightbox-image");
+  if (!lightbox || !image) {
+    return;
+  }
+  image.removeAttribute("src");
+  lightbox.classList.add("hidden");
 }
 
 window.handlePhotoClick = (src, altText) => {
@@ -300,16 +310,23 @@ window.handleRemoveClick = (placeId) => {
 };
 
 window.openHelpModal = () => {
-  el.helpModal.classList.remove("hidden");
+  const modal = document.getElementById("help-modal");
+  if (modal) {
+    modal.classList.remove("hidden");
+  }
 };
 
 window.closeHelpModal = () => {
-  el.helpModal.classList.add("hidden");
+  const modal = document.getElementById("help-modal");
+  if (modal) {
+    modal.classList.add("hidden");
+  }
 };
 
 window.closeHelpIfBackdrop = (event) => {
-  if (event.target === el.helpModal) {
-    el.helpModal.classList.add("hidden");
+  const modal = document.getElementById("help-modal");
+  if (modal && event.target === modal) {
+    modal.classList.add("hidden");
   }
 };
 
@@ -1411,6 +1428,8 @@ window.addEventListener("error", () => {
 });
 
 init();
+
+
 
 
 
