@@ -273,17 +273,29 @@ function toMapsQuery(place) {
   return encodeURIComponent(place.address || `${place.name}, ${place.area}, Japan`);
 }
 
-function openLightbox(src, altText) {\r\n  const lightbox = document.getElementById("photo-lightbox");\r\n  const image = document.getElementById("lightbox-image");\r\n  if (!lightbox || !image) {\r\n    return;\r\n  }\r\n  image.src = src;\r\n  image.alt = altText || "Enlarged photo";\r\n  lightbox.classList.remove("hidden");\r\n  lightbox.style.display = "flex";\r\n  lightbox.style.zIndex = "1000";\r\n}
+function openLightbox(src, altText) {
+  const lightbox = document.getElementById("photo-lightbox");
+  const image = document.getElementById("lightbox-image");
+  if (!lightbox || !image) {
+    return;
+  }
   image.src = src;
   image.alt = altText || "Enlarged photo";
   lightbox.classList.remove("hidden");
+  lightbox.style.display = "flex";
+  lightbox.style.zIndex = "1000";
 }
 
-function closeLightbox() {\r\n  const lightbox = document.getElementById("photo-lightbox");\r\n  const image = document.getElementById("lightbox-image");\r\n  if (!lightbox || !image) {\r\n    return;\r\n  }\r\n  image.removeAttribute("src");\r\n  lightbox.classList.add("hidden");\r\n  lightbox.style.display = "none";\r\n}
+function closeLightbox() {
+  const lightbox = document.getElementById("photo-lightbox");
+  const image = document.getElementById("lightbox-image");
+  if (!lightbox || !image) {
+    return;
+  }
   image.removeAttribute("src");
   lightbox.classList.add("hidden");
+  lightbox.style.display = "none";
 }
-
 window.handlePhotoClick = (src, altText) => {
   openLightbox(src, altText);
 };
@@ -1420,6 +1432,7 @@ window.addEventListener("error", () => {
 });
 
 init();
+
 
 
 
