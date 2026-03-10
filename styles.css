@@ -671,11 +671,7 @@ tr:hover td {
   color: rgba(255, 255, 255, 0.75);
 }
 
-.panel-feature input,
-.panel-feature select {
-  border-color: rgba(84, 201, 173, 0.45);
-  background: rgba(9, 20, 24, 0.7);
-}
+.panel-feature input,\r\n.panel-feature select {\r\n  border-color: rgba(84, 201, 173, 0.45);\r\n  background: rgba(9, 20, 24, 0.7);\r\n  color: #eef8f5;\r\n}\r\n\r\n.panel-feature label {\r\n  color: rgba(255, 255, 255, 0.85);\r\n}\r\n\r\n.panel-feature select option {\r\n  color: #0b161a;\r\n}\r\n\r\n.panel-feature ::placeholder {\r\n  color: rgba(255, 255, 255, 0.6);\r\n}\r\n
 
 .panel-feature input:focus,
 .panel-feature select:focus {
@@ -691,4 +687,5 @@ tr:hover td {
 .panel-feature #reset-filters:hover {
   background: rgba(84, 201, 173, 0.25);
 }
+
 
